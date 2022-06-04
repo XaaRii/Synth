@@ -1,0 +1,17 @@
+{
+  "name": "synth",
+  "version": "1.0.0",
+  "description": "creates and synchronises playlist from spotify to youtube",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "XaaRi",
+  "license": "ISC",
+  "dependencies": {
+    "googleapis": "^100.0.0",
+    "readline-sync": "^1.4.10",
+    "spotify-web-api-node": "^5.0.2",
+    "youtube-music-api": "^1.0.6"
+  }
+}
