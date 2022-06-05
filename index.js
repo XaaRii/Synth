@@ -12,6 +12,7 @@ fs.readFile(DBfilename, function (err, data) {
     if (err) return;
     database = JSON.parse(data)
 });
+var ftcpl = ""
 
 // Wipeclean vars
 const BRUSH_WIDTH = 6,
@@ -176,7 +177,8 @@ function firsttimer() {
                         return;
                     }
                     database.GplaylistID = res.data.id
-                    console.log("Playlist created successfully. You can find it here: \033[36;49mhttps://www.youtube.com/playlist?list=" + database.GplaylistID + "\033[0m")
+                    console.log("Playlist created successfully.")
+                    ftcpl = "https://www.youtube.com/playlist?list=" + database.GplaylistID
                     fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
                         if (err) return console.log("There was a problem saving the database file: ", err);
                         console.log("Alright, saving your preferences...")
@@ -288,7 +290,8 @@ function ytPlaylistModify(youtube, i) {
             if (newsongsYT.length == (i + 1)) {
                 database.songs.push(newsongsYT[i].suri)
                 console.log(`[${(i + 1)}/${(newsongsYT.length)}] Successfully added ${newsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
-                console.log("\nDone!")
+                if (ftcpl !== "") console.log("\nDone! You can find your new \033[31;49;1mYouTube\033[0m playlist here: \033[36;49m" + ftcpl + "\033[0m");
+                else console.log("\nDone!");
                 fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
                     if (err) console.warn("There was a problem saving the database file: ", err);
                 });
