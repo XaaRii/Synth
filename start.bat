@@ -1,5 +1,5 @@
 @Mode con: cols=100 lines=30
-@powershell -command "&{$H=get-host;$W=$H.ui.rawui;$B=$W.buffersize;$B.width=100;$B.height=1000;$W.buffersize=$B;}"
+@powershell -command "&{$H=get-host;$W=$H.ui.rawui;$B=$W.buffersize;$B.width=100;$B.height=9000;$W.buffersize=$B;}"
 @echo off
 cd /d %~dp0
 :A

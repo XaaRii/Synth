@@ -2,5 +2,5 @@
 test-scripts
 node_modules
 credentials.json
-pawele.gtoken.json
 .gtoken.json
+*.pl

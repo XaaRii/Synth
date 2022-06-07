@@ -50,7 +50,8 @@ var { google } = require('googleapis'),
     OAuth2 = google.auth.OAuth2,
     Gscopes = ['https://www.googleapis.com/auth/youtube'],
     Gtokenpath = './.gtoken.json',
-    newsongsYT = [];
+    newsongsYT = [],
+    addsongsYT = [];
 
 function firsttimer() {
     // First time setup!
@@ -229,6 +230,8 @@ async function s2ytINIT() {
 
 async function ytSearch(i) {
     await ytsearch.search(`${newsongsYT[i].artist} - ${newsongsYT[i].name}`).then(r => {
+    //    console.log(`searching: ${newsongsYT[i].artist} - ${newsongsYT[i].name}\nResults:`)
+    //    console.log(r)
         finders(r, 0, i)
     })
     if (newsongsYT.length !== (i + 1)) {
@@ -244,8 +247,9 @@ async function finders(r, t, isong) {
     if (t > 4) return console.log(`Couldn't find any valid match for ${newsongsYT[isong].name}!`);
     var item = r.content[t]
     if (item.videoId === undefined) return await finders(r, (t + 1), isong)
-    if (item.name.includes(newsongsYT[isong].name)) {
+    if (item.name.toLowerCase().includes(newsongsYT[isong].name.toLowerCase())) {
         newsongsYT[isong].yuri = await item.videoId
+        addsongsYT.push(newsongsYT[isong])
         switch (item.type) {
             case 'song': console.log(`\x1b[31;49;1mYouTube\x1b[0m: (video) ${item.name}`); break;
             case 'video': console.log(`\x1b[31;49;1mYouTube\x1b[0m: (music) ${item.name}`); break;
@@ -266,30 +270,39 @@ function ytPlaylistModify(youtube, i) {
             snippet: {
                 playlistId: database.GplaylistID,
                 resourceId: {
-                    videoId: newsongsYT[i].yuri,
+                    videoId: addsongsYT[i].yuri,
                     kind: "youtube#video"
                 }
             }
         }
     }, function (err, res) {
         if (err) {
-            if (err.toString() == "Error: Playlist not found.") {
-                console.log("\x1b[31;49;1mERROR: \x1b[31;49;1mYouTube\x1b[0m\x1b[31;49m Playlist not found - did you enter it correctly? Please delete '" + DBfilename + "' file and try again.\x1b[0m")
-                console.log("Exiting...")
-                return process.exit(1)
-            } else if (err.toString() == "Error: Forbidden") {
-                console.log("\x1b[31;49;1mERROR:\x1b[31;49m Forbidden action - you probably didn't pick a google account containing a youtube channel. Please delete '.gtoken.json' file and try again.\x1b[0m")
-                console.log("Exiting...")
-                return process.exit(1)
-            } else {
-                console.log('The API returned an error: ' + err);
-                ytPlaylistModify(youtube, (i + 1))
+            switch (err.toString()) {
+                case "Error: The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.":
+                    console.log("\x1b[31;49;1mERROR: \x1b[31;49mAPI limit - This app reached its quota of actions it can do. The limit is per day, so come back tommorow and try again.\x1b[0m")
+                    console.log("Exiting...")
+                    return process.exit(1)
+                    break
+                case "Error: Playlist not found.":
+                    console.log("\x1b[31;49;1mERROR: \x1b[31;49;1mYouTube\x1b[0m\x1b[31;49m Playlist not found - did you enter it correctly? Please delete '" + DBfilename + "' file and try again.\x1b[0m")
+                    console.log("Exiting...")
+                    return process.exit(1)
+                    break
+                case "Error: Forbidden":
+                    console.log("\x1b[31;49;1mERROR:\x1b[31;49m Forbidden action - you probably didn't pick a google account containing a youtube channel. Please delete '.gtoken.json' file and try again.\x1b[0m")
+                    console.log("Exiting...")
+                    return process.exit(1)
+                    break
+                default:
+                    console.log('The API returned an error: ' + err);
+                    ytPlaylistModify(youtube, (i + 1))
+                    break
             }
         }
         else {
-            if (newsongsYT.length == (i + 1)) {
-                database.songs.push(newsongsYT[i].suri)
-                console.log(`[${(i + 1)}/${(newsongsYT.length)}] Successfully added ${newsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
+            if (addsongsYT.length == (i + 1)) {
+                database.songs.push(addsongsYT[i].suri)
+                console.log(`[${(i + 1)}/${(addsongsYT.length)}] Successfully added ${addsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
                 if (ftcpl !== "") console.log("\nDone! You can find your new \033[31;49;1mYouTube\033[0m playlist here: \033[36;49m" + ftcpl + "\033[0m");
                 else console.log("\nDone!");
                 fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
@@ -297,8 +310,8 @@ function ytPlaylistModify(youtube, i) {
                 });
             }
             else {
-                database.songs.push(newsongsYT[i].suri)
-                console.log(`[${(i + 1)}/${(newsongsYT.length)}] Successfully added ${newsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
+                database.songs.push(addsongsYT[i].suri)
+                console.log(`[${(i + 1)}/${(addsongsYT.length)}] Successfully added ${addsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
                 ytPlaylistModify(youtube, (i + 1))
             }
         }
@@ -371,255 +384,255 @@ function wipeclean(speed = (process.stdout.columns + process.stdout.rows)) { // 
     const zigZagPath = getZigZagPath(COLUMNS, ROWS)
     const rectangulaPath = getRectangularPath(zigZagPath[zigZagPath.length - 1], COLUMNS, ROWS)
     const finalPath = [...zigZagPath, ...rectangulaPath]
-  
+
     finalPath.forEach((point, index) => {
-      const BurshPoints = getBrushPoints(point.x, point.y, point.angle)
-  
-      //draw Brush
-      setTimeout(() => {
-        drawPoints(COLUMNS, ROWS, BurshPoints)
-      }, index * msPerFrame)
-  
-      //erase brush with a DELAY
-      if (index + DELAY >= 0)
+        const BurshPoints = getBrushPoints(point.x, point.y, point.angle)
+
+        //draw Brush
         setTimeout(() => {
-          drawPoints(COLUMNS, ROWS, BurshPoints, ' ')
-        }, (index + DELAY) * msPerFrame)
+            drawPoints(COLUMNS, ROWS, BurshPoints)
+        }, index * msPerFrame)
+
+        //erase brush with a DELAY
+        if (index + DELAY >= 0)
+            setTimeout(() => {
+                drawPoints(COLUMNS, ROWS, BurshPoints, ' ')
+            }, (index + DELAY) * msPerFrame)
     })
-  
+
     //clear the screen and remove all log
     setTimeout(() => {
-      process.stdout.cursorTo(0, 0)
-      process.stdout.write('\x1Bc')
-      main()
+        process.stdout.cursorTo(0, 0)
+        process.stdout.write('\x1Bc')
+        main()
     }, (finalPath.length + DELAY) * msPerFrame)
-  }
-  
-  function getZigZagPath(COLUMNS, ROWS) {
+}
+
+function getZigZagPath(COLUMNS, ROWS) {
     //get half circle path
     const circlePointsLeft = getCirclefPoints(
-      Math.floor(BRUSH_WIDTH / 2),
-      Math.PI / 2,
-      (Math.PI * 3) / 2,
+        Math.floor(BRUSH_WIDTH / 2),
+        Math.PI / 2,
+        (Math.PI * 3) / 2,
     ).reverse()
     const circlePointsRight = getCirclefPoints(
-      Math.floor(BRUSH_WIDTH / 2),
-      (Math.PI * 3) / 2,
-      (Math.PI * 5) / 2,
+        Math.floor(BRUSH_WIDTH / 2),
+        (Math.PI * 3) / 2,
+        (Math.PI * 5) / 2,
     )
-  
+
     //points by which the squeegee
     const keyPoints = getKeyPoints(COLUMNS, ROWS)
-  
+
     let points = []
     for (let step = 0; step < keyPoints.length; step++) {
-      const linePoints = getLinePoints(
-        keyPoints[step][0].x,
-        keyPoints[step][0].y,
-        keyPoints[step][1].x,
-        keyPoints[step][1].y,
-      )
-      const turnPoints = (
-        step % 2 == 0 ? circlePointsRight : circlePointsLeft
-      ).map((point) => ({
-        x: point.x + keyPoints[step][1].x,
-        y: point.y + keyPoints[step][1].y + BRUSH_WIDTH / 2,
-        angle: point.angle,
-      }))
-      points = [...points, ...linePoints, ...turnPoints]
+        const linePoints = getLinePoints(
+            keyPoints[step][0].x,
+            keyPoints[step][0].y,
+            keyPoints[step][1].x,
+            keyPoints[step][1].y,
+        )
+        const turnPoints = (
+            step % 2 == 0 ? circlePointsRight : circlePointsLeft
+        ).map((point) => ({
+            x: point.x + keyPoints[step][1].x,
+            y: point.y + keyPoints[step][1].y + BRUSH_WIDTH / 2,
+            angle: point.angle,
+        }))
+        points = [...points, ...linePoints, ...turnPoints]
     }
     return points
-  }
-  
-  function getRectangularPath(closestStartPoint, COLUMNS, ROWS) {
+}
+
+function getRectangularPath(closestStartPoint, COLUMNS, ROWS) {
     let points = []
     const verticalMargin = BRUSH_WIDTH / 2
     const horizontalMargin = (BRUSH_WIDTH * DEFORMATION_FACTOR) / 2
     const startPoint = { x: closestStartPoint.x, y: ROWS - verticalMargin }
-  
+
     for (let x = startPoint.x; x > -2; x--) {
-      points.push({ y: ROWS - verticalMargin + 1, x, angle: Math.PI / 2 })
+        points.push({ y: ROWS - verticalMargin + 1, x, angle: Math.PI / 2 })
     }
-  
+
     let anglePoints = getCirclefPoints(
-      Math.floor(BRUSH_WIDTH / 2),
-      0,
-      Math.PI / 2,
+        Math.floor(BRUSH_WIDTH / 2),
+        0,
+        Math.PI / 2,
     )
     anglePoints = anglePoints
-      .map((point) => ({
-        x: point.x,
-        y: point.y + ROWS - verticalMargin * 2,
-        angle: point.angle,
-      }))
-      .reverse()
+        .map((point) => ({
+            x: point.x,
+            y: point.y + ROWS - verticalMargin * 2,
+            angle: point.angle,
+        }))
+        .reverse()
     points = [...points, ...anglePoints]
-  
+
     for (let y = ROWS - verticalMargin - 3; y > -1; y--) {
-      points.push({ y, x: horizontalMargin - 1, angle: Math.PI })
-      points.push({ y, x: horizontalMargin - 1, angle: Math.PI })
+        points.push({ y, x: horizontalMargin - 1, angle: Math.PI })
+        points.push({ y, x: horizontalMargin - 1, angle: Math.PI })
     }
-  
+
     let anglePoints2 = getCirclefPoints(
-      Math.floor(BRUSH_WIDTH / 2),
-      Math.PI,
-      (Math.PI * 3) / 2,
+        Math.floor(BRUSH_WIDTH / 2),
+        Math.PI,
+        (Math.PI * 3) / 2,
     ).reverse()
     anglePoints2 = anglePoints2
-      .map((point) => ({
-        x: point.x + horizontalMargin * 2,
-        y: point.y,
-        angle: point.angle,
-      }))
-      .reverse()
+        .map((point) => ({
+            x: point.x + horizontalMargin * 2,
+            y: point.y,
+            angle: point.angle,
+        }))
+        .reverse()
     points = [...points, ...anglePoints2]
-  
+
     for (let x = horizontalMargin + 3; x < COLUMNS; x++) {
-      points.push({ y: verticalMargin - 1, x, angle: Math.PI / 2 })
+        points.push({ y: verticalMargin - 1, x, angle: Math.PI / 2 })
     }
-  
+
     let anglePoints3 = getCirclefPoints(
-      Math.floor(BRUSH_WIDTH / 2),
-      Math.PI,
-      (Math.PI * 3) / 2,
+        Math.floor(BRUSH_WIDTH / 2),
+        Math.PI,
+        (Math.PI * 3) / 2,
     ).reverse()
     anglePoints3 = anglePoints3.map((point) => ({
-      x: point.x + COLUMNS,
-      y: point.y + verticalMargin * 2,
-      angle: point.angle,
+        x: point.x + COLUMNS,
+        y: point.y + verticalMargin * 2,
+        angle: point.angle,
     }))
     points = [...points, ...anglePoints3]
-  
+
     for (let y = verticalMargin + 3; y < ROWS; y++) {
-      points.push({ y, x: COLUMNS - horizontalMargin, angle: Math.PI })
-      points.push({ y, x: COLUMNS - horizontalMargin, angle: Math.PI })
+        points.push({ y, x: COLUMNS - horizontalMargin, angle: Math.PI })
+        points.push({ y, x: COLUMNS - horizontalMargin, angle: Math.PI })
     }
-  
+
     let anglePoints4 = getCirclefPoints(
-      Math.floor(BRUSH_WIDTH / 2),
-      (Math.PI * 3) / 2,
-      (Math.PI * 4) / 2,
+        Math.floor(BRUSH_WIDTH / 2),
+        (Math.PI * 3) / 2,
+        (Math.PI * 4) / 2,
     )
     anglePoints4 = anglePoints4
-      .map((point) => ({
-        x: point.x + COLUMNS - horizontalMargin * 2,
-        y: point.y + ROWS,
-        angle: point.angle,
-      }))
-      .reverse()
+        .map((point) => ({
+            x: point.x + COLUMNS - horizontalMargin * 2,
+            y: point.y + ROWS,
+            angle: point.angle,
+        }))
+        .reverse()
     points = [...points, ...anglePoints4]
-  
+
     for (let x = COLUMNS - horizontalMargin - 3; x > startPoint.x; x--) {
-      points.push({ y: ROWS - verticalMargin, x, angle: Math.PI / 2 })
+        points.push({ y: ROWS - verticalMargin, x, angle: Math.PI / 2 })
     }
     return points
-  }
-  
-  function getCirclefPoints(radius, start, end) {
+}
+
+function getCirclefPoints(radius, start, end) {
     const angleStep = 5
     let points = []
     for (
-      let angle = start;
-      angle < end;
-      angle += ((2 * Math.PI) / 360) * angleStep
+        let angle = start;
+        angle < end;
+        angle += ((2 * Math.PI) / 360) * angleStep
     ) {
-      points.push({
-        x: Math.cos(angle) * radius * DEFORMATION_FACTOR,
-        y: Math.sin(angle) * radius,
-        angle,
-      })
+        points.push({
+            x: Math.cos(angle) * radius * DEFORMATION_FACTOR,
+            y: Math.sin(angle) * radius,
+            angle,
+        })
     }
     return points
-  }
-  
-  function getKeyPoints(COLUMNS, ROWS) {
+}
+
+function getKeyPoints(COLUMNS, ROWS) {
     let points = []
     const halfBrushDeformed = (BRUSH_WIDTH * DEFORMATION_FACTOR) / 2
     let step = 0
-  
+
     while ((BRUSH_WIDTH / 2) * 3 + (step - 1) * BRUSH_WIDTH < ROWS) {
-      points.push([
-        {
-          x: halfBrushDeformed * 2,
-          y: (BRUSH_WIDTH / 2) * 2 + step * BRUSH_WIDTH,
-        },
-        {
-          x: COLUMNS - halfBrushDeformed * 2,
-          y: (BRUSH_WIDTH / 2) * 1 + step * BRUSH_WIDTH,
-        },
-      ])
-      points.push([
-        {
-          x: COLUMNS - halfBrushDeformed * 2,
-          y: (BRUSH_WIDTH / 2) * 3 + step * BRUSH_WIDTH,
-        },
-        {
-          x: halfBrushDeformed * 2,
-          y: (BRUSH_WIDTH / 2) * 2 + step * BRUSH_WIDTH,
-        },
-      ])
-      step++
+        points.push([
+            {
+                x: halfBrushDeformed * 2,
+                y: (BRUSH_WIDTH / 2) * 2 + step * BRUSH_WIDTH,
+            },
+            {
+                x: COLUMNS - halfBrushDeformed * 2,
+                y: (BRUSH_WIDTH / 2) * 1 + step * BRUSH_WIDTH,
+            },
+        ])
+        points.push([
+            {
+                x: COLUMNS - halfBrushDeformed * 2,
+                y: (BRUSH_WIDTH / 2) * 3 + step * BRUSH_WIDTH,
+            },
+            {
+                x: halfBrushDeformed * 2,
+                y: (BRUSH_WIDTH / 2) * 2 + step * BRUSH_WIDTH,
+            },
+        ])
+        step++
     }
     return points
-  }
-  
-  function getLinePoints(startX, startY, endX, endY) {
+}
+
+function getLinePoints(startX, startY, endX, endY) {
     let points = []
     const Ystep = (endY - startY) / Math.abs(endX - startX)
     const Xdirection = endX > startX ? 1 : -1
     const angle = -Math.atan((endY - startX) / startY - endY)
     for (let step = 0; step < Math.abs(endX - startX); step++) {
-      points.push({
-        x: step * Xdirection + startX,
-        y: startY + Ystep * step,
-        angle,
-      })
+        points.push({
+            x: step * Xdirection + startX,
+            y: startY + Ystep * step,
+            angle,
+        })
     }
     return points
-  }
-  
-  function getBrushPoints(x, y, angle) {
+}
+
+function getBrushPoints(x, y, angle) {
     let newX = 0
     let newY = 0
     let points = []
     const halfBrushWidth = BRUSH_WIDTH / 2
-  
+
     const oppositeAngle = angle + Math.PI
-  
+
     for (let step = 0; step < halfBrushWidth * DEFORMATION_FACTOR; step++) {
-      newX =
-        x +
-        Math.cos(angle) *
-          ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step) *
-          DEFORMATION_FACTOR
-      newY =
-        y +
-        Math.sin(angle) *
-          ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step)
-      points.push({ x: newX, y: newY })
-  
-      newX =
-        x +
-        Math.cos(oppositeAngle) *
-          ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step) *
-          DEFORMATION_FACTOR
-      newY =
-        y +
-        Math.sin(oppositeAngle) *
-          ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step)
-      points.push({ x: newX, y: newY })
+        newX =
+            x +
+            Math.cos(angle) *
+            ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step) *
+            DEFORMATION_FACTOR
+        newY =
+            y +
+            Math.sin(angle) *
+            ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step)
+        points.push({ x: newX, y: newY })
+
+        newX =
+            x +
+            Math.cos(oppositeAngle) *
+            ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step) *
+            DEFORMATION_FACTOR
+        newY =
+            y +
+            Math.sin(oppositeAngle) *
+            ((halfBrushWidth / (halfBrushWidth * DEFORMATION_FACTOR)) * step)
+        points.push({ x: newX, y: newY })
     }
     return points
-  }
-  
-  function drawnStringAt(x, y, str) {
+}
+
+function drawnStringAt(x, y, str) {
     process.stdout.cursorTo(Math.round(x), Math.round(y))
     process.stdout.write(str)
-  }
-  
-  function drawPoints(COLUMNS, ROWS, list, character = '#') {
+}
+
+function drawPoints(COLUMNS, ROWS, list, character = '#') {
     list.forEach((point) => {
-      if (point.y < ROWS && point.x < COLUMNS)
-        drawnStringAt(point.x, point.y, character)
+        if (point.y < ROWS && point.x < COLUMNS)
+            drawnStringAt(point.x, point.y, character)
     })
-  }
+}
