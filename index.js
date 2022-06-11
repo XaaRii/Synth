@@ -5,6 +5,29 @@ var database = {
     GplaylistID: "",
     songs: []
 }
+
+process.on('SIGINT', function () {
+    console.log("sigint")
+    fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
+        if (err) console.warn("There was a problem saving the database file: ", err);
+        process.exit()
+    });
+})
+process.on('SIGTERM', function () {
+    console.log("sigterm")
+    fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
+        if (err) console.warn("There was a problem saving the database file: ", err);
+        process.exit()
+    });
+})
+process.on('SIGQUIT', function () {
+    console.log("sigquit")
+    fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
+        if (err) console.warn("There was a problem saving the database file: ", err);
+        process.exit()
+    });
+})
+
 var DBfilename = "default.pl"
 if (process.argv.slice(2)[0] !== undefined) DBfilename = process.argv.slice(2)[0] + ".pl"
 console.log("Config file: " + DBfilename)
@@ -26,8 +49,15 @@ var SpotifyWebApi = require('spotify-web-api-node'),
     });
 
 // Spotify to YT
-const YoutubeMusicApi = require('youtube-music-api');
+const YoutubeMusicApi = require('youtube-music-api-update');
 const ytsearch = new YoutubeMusicApi()
+
+// Google API -----------------------------
+var { google } = require('googleapis'),
+    OAuth2 = google.auth.OAuth2,
+    Gscopes = ['https://www.googleapis.com/auth/youtube'],
+    Gtokenpath = './.gtoken.json',
+    newsongsYT = [];
 
 // Spotify token grant
 spotifyApi.clientCredentialsGrant().then(
@@ -44,14 +74,6 @@ spotifyApi.clientCredentialsGrant().then(
         if (!fs.existsSync(DBfilename)) firsttimer();
         else main();
     })
-
-// Google API -----------------------------
-var { google } = require('googleapis'),
-    OAuth2 = google.auth.OAuth2,
-    Gscopes = ['https://www.googleapis.com/auth/youtube'],
-    Gtokenpath = './.gtoken.json',
-    newsongsYT = [],
-    addsongsYT = [];
 
 function firsttimer() {
     // First time setup!
@@ -206,14 +228,14 @@ function main() {
                 else {
                     var sname = songs[i].track.name
                     var sartist = songs[i].track.artists[0].name
-                    newsongsYT.push({ suri: suri, artist: sartist, name: sname, yuri: "" })
+                    newsongsYT.push({ suri: suri, artist: sartist, name: sname, album: songs[i].track.album.name, yid: "" })
                     console.log(`\x1b[32;49;1mSpotify\x1b[0m: ${sartist} - ${sname}`)
                 }
             }
             if (newsongsYT.length === 1) console.log(`${newsongsYT.length} new song found (${songs.length} total)`)
             else console.log(`${newsongsYT.length} new songs found (${songs.length} total)`)
             if (newsongsYT.length === 0) console.log("\nNothing to add, job's done.");
-            else s2ytINIT()
+            else Gauthorize(config.google, ytMain)
         }, function (err) {
             if (err.body.error.message.toString() == "Invalid playlist Id") {
                 console.log("\x1b[31;49;1mERROR: \x1b[32;49;1mSpotify\x1b[0m\x1b[31;49m Playlist not found - did you enter it correctly? Please delete '" + DBfilename + "' file and try again.\x1b[0m")
@@ -222,101 +244,203 @@ function main() {
             } else console.log('Something went wrong!', err);
         });
 }
-async function s2ytINIT() {
+
+async function ytMain(auth) {
+    var youtube = google.youtube({ version: 'v3', auth: auth });
     console.log("\nSearching for the songs on \033[31;49;1mYouTube\033[0m")
     await ytsearch.initalize()
-    ytSearch(0)
+    await comboPiece(youtube, 0)
 }
 
-async function ytSearch(i) {
-    await ytsearch.search(`${newsongsYT[i].artist} - ${newsongsYT[i].name}`).then(r => {
-    //    console.log(`searching: ${newsongsYT[i].artist} - ${newsongsYT[i].name}\nResults:`)
-    //    console.log(r)
-        finders(r, 0, i)
-    })
-    if (newsongsYT.length !== (i + 1)) {
-        await ytSearch((i + 1))
-    } else {
-        // done
-        console.log("");
-        Gauthorize(config.google, ytMain)
+async function processor(filtered, type, index, result, sample) {
+    var interest, typerino
+    switch (type) {
+        case 0:
+            var scope = filtered.song
+            if (index < scope.length) interest = scope[index];
+            else {
+                await processor(filtered, (type + 1), 0, result, sample)
+                return;
+            }
+            typerino = "song"
+            break;
+        case 1:
+            var scope = filtered.video
+            if (index < scope.length) interest = scope[index];
+            else {
+                await processor(filtered, (type + 1), 0, result, sample)
+                return;
+            }
+            typerino = "video"
+            break;
+        case 2:
+            var scope = filtered.other
+            if (index < scope.length) interest = scope[index];
+            else return;
+            typerino = "other"
+            break;
+        default: return
     }
+    interest.type = typerino
+    if (interest.name.toLowerCase().includes(sample.name.toLowerCase())) {
+        result.picked = await interest
+        return;
+    } else {
+        await result.helpchoose.push(interest)
+    }
+    await processor(filtered, type, (index + 1), result, sample)
 }
-async function finders(r, t, isong) {
-    //console.log("finders() ", `${newsongsYT[isong].artist} - ${newsongsYT[isong].name}`, t, isong)
-    if (t > 4) return console.log(`Couldn't find any valid match for ${newsongsYT[isong].name}!`);
-    var item = r.content[t]
-    if (item.videoId === undefined) return await finders(r, (t + 1), isong)
-    if (item.name.toLowerCase().includes(newsongsYT[isong].name.toLowerCase())) {
-        newsongsYT[isong].yuri = await item.videoId
-        addsongsYT.push(newsongsYT[isong])
-        switch (item.type) {
-            case 'song': console.log(`\x1b[31;49;1mYouTube\x1b[0m: (video) ${item.name}`); break;
-            case 'video': console.log(`\x1b[31;49;1mYouTube\x1b[0m: (music) ${item.name}`); break;
-            default: console.log(`\x1b[31;49;1mYouTube\x1b[0m: (other) ${item.name}`); break;
-        }
-    } else finders(r, (t + 1), isong)
+function externalhelp(arr, t) {
+    var readlineSync = require('readline-sync')
+    console.log("I'm having trouble assigning this: " + t.artist + " - " + t.name)
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i].type == "song") console.log(`\x1b[37;1m[${(i + 1)}]\x1b[0m (music)  \x1b[36m${arr[i].name}\x1b[0m (by \x1b[33m${arr[i].artist}\x1b[0m)`)
+        if (arr[i].type == "video") console.log(`\x1b[37;1m[${(i + 1)}]\x1b[0m (video)  \x1b[36m${arr[i].name}\x1b[0m (by \x1b[33m${arr[i].author}\x1b[0m)`)
+        if (arr[i].type == "other") console.log(`\x1b[37;1m[${(i + 1)}]\x1b[0m (other)  \x1b[36m${arr[i].name}\x1b[0m`)
+    }
+    console.log("\n\x1b[37;1m[0]\x1b[0m Nothing from this list.\n\x1b[37;1m[never]\x1b[0m Nothing from this list, don't ever ask me again on this song.")
+    var resp = readlineSync.question('> ')
+    return resp
 }
 
-function ytMain(auth) {
-    var youtube = google.youtube({ version: 'v3', auth: auth });
-    ytPlaylistModify(youtube, 0)
-}
-function ytPlaylistModify(youtube, i) {
-    var request = youtube.playlistItems.insert({
-        // access_token: auth,
-        part: 'id,snippet',
-        resource: {
-            snippet: {
-                playlistId: database.GplaylistID,
-                resourceId: {
-                    videoId: addsongsYT[i].yuri,
-                    kind: "youtube#video"
-                }
+async function comboPiece(youtube, i) {
+    if (i < newsongsYT.length) {
+        // first search check
+        await ytsearch.search(`${newsongsYT[i].artist} - ${newsongsYT[i].name}`).then(async r => {
+            //    console.log(`searching: ${newsongsYT[i].artist} - ${newsongsYT[i].name}\nResults:`)
+            //    console.log(r)
+            var filtered = {
+                count: 0,
+                song: [],
+                video: [],
+                other: []
             }
-        }
-    }, function (err, res) {
-        if (err) {
-            switch (err.toString()) {
-                case "Error: The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.":
-                    console.log("\x1b[31;49;1mERROR: \x1b[31;49mAPI limit - This app reached its quota of actions it can do. The limit is per day, so come back tommorow and try again.\x1b[0m")
-                    console.log("Exiting...")
-                    return process.exit(1)
-                    break
-                case "Error: Playlist not found.":
-                    console.log("\x1b[31;49;1mERROR: \x1b[31;49;1mYouTube\x1b[0m\x1b[31;49m Playlist not found - did you enter it correctly? Please delete '" + DBfilename + "' file and try again.\x1b[0m")
-                    console.log("Exiting...")
-                    return process.exit(1)
-                    break
-                case "Error: Forbidden":
-                    console.log("\x1b[31;49;1mERROR:\x1b[31;49m Forbidden action - you probably didn't pick a google account containing a youtube channel. Please delete '.gtoken.json' file and try again.\x1b[0m")
-                    console.log("Exiting...")
-                    return process.exit(1)
-                    break
-                default:
-                    console.log('The API returned an error: ' + err);
-                    ytPlaylistModify(youtube, (i + 1))
-                    break
-            }
-        }
-        else {
-            if (addsongsYT.length == (i + 1)) {
-                database.songs.push(addsongsYT[i].suri)
-                console.log(`[${(i + 1)}/${(addsongsYT.length)}] Successfully added ${addsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
-                if (ftcpl !== "") console.log("\nDone! You can find your new \033[31;49;1mYouTube\033[0m playlist here: \033[36;49m" + ftcpl + "\033[0m");
-                else console.log("\nDone!");
-                fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
-                    if (err) console.warn("There was a problem saving the database file: ", err);
-                });
+            await finders(r, 0, i, filtered)
+            if (filtered.count == 0) {
+                console.log(`Couldn't find any valid match for ${newsongsYT[isong].name}!`);
+                await comboPiece(youtube, (i + 1))
             }
             else {
-                database.songs.push(addsongsYT[i].suri)
-                console.log(`[${(i + 1)}/${(addsongsYT.length)}] Successfully added ${addsongsYT[i].name} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
-                ytPlaylistModify(youtube, (i + 1))
+                //zpracovat
+                var ytname = "", ytid = "", yttype = ""
+                //console.log(filtered)
+                var result = {
+                    picked: false,
+                    // { name, videoId, type(song/video/other) }
+                    helpchoose: []
+                    // [{interest},..]
+                }
+                await processor(filtered, 0, 0, result, newsongsYT[i])
+                if (!result.picked) {
+                    var res = await externalhelp(result.helpchoose, newsongsYT[i])
+                    if (res == 0) {
+                        console.log(`Couldn't find any valid match for ${newsongsYT[i].name}!`)
+                        if (newsongsYT.length == (i + 1)) return;
+                        await comboPiece(youtube, (i + 1))
+                        return;
+                    }
+                    if (res == "never") {
+                        console.log(`Alright, I won't ask you again about ${newsongsYT[i].name}.`)
+                        database.songs.push(newsongsYT[i].suri)
+                        if (newsongsYT.length == (i + 1)) return;
+                        await comboPiece(youtube, (i + 1))
+                        return;
+                    }
+                    result.picked = result.helpchoose[(res - 1)]
+                }
+                ytname = result.picked.name;
+                ytid = result.picked.videoId;
+                yttype = result.picked.type;
+
+                // then add
+                switch (yttype) {
+                    case 'song': console.log(`\x1b[31;49;1mYouTube\x1b[0m: (music) ${ytname}`); break;
+                    case 'video': console.log(`\x1b[31;49;1mYouTube\x1b[0m: (video) ${ytname}`); break;
+                    default: console.log(`\x1b[31;49;1mYouTube\x1b[0m: (other) ${ytname}`); break;
+                }
+
+                var request = youtube.playlistItems.insert({
+                    part: 'snippet', //removed id part
+                    resource: {
+                        snippet: {
+                            playlistId: database.GplaylistID,
+                            resourceId: {
+                                videoId: ytid,
+                                kind: "youtube#video"
+                            }
+                        }
+                    }
+                }, async function (err, res) {
+                    if (err) {
+                        switch (err.toString()) {
+                            case "Error: The request cannot be completed because you have exceeded your <a href=\"/youtube/v3/getting-started#quota\">quota</a>.":
+                                console.log("\x1b[31;49;1mERROR: \x1b[31;49mAPI limit - This app reached its quota of actions it can do. The limit is per day, so come back tommorow and try again.\x1b[0m")
+                                fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
+                                    if (err) return console.log("There was a problem saving the database file: ", err);
+                                    console.log("Exiting...")
+                                    return process.exit(1)
+                                })
+                                break
+                            case "Error: Playlist not found.":
+                                console.log("\x1b[31;49;1mERROR: \x1b[31;49;1mYouTube\x1b[0m\x1b[31;49m Playlist not found - did you enter it correctly? Please delete '" + DBfilename + "' file and try again.\x1b[0m")
+                                console.log("Exiting...")
+                                return process.exit(1)
+                                break
+                            case "Error: Forbidden":
+                                console.log("\x1b[31;49;1mERROR:\x1b[31;49m Forbidden action - you probably didn't pick a google account containing a youtube channel. Please delete '.gtoken.json' file and try again.\x1b[0m")
+                                console.log("Exiting...")
+                                return process.exit(1)
+                                break
+                            default:
+                                console.log('The API returned an error: ' + err);
+                                comboPiece(youtube, (i + 1))
+                                break
+                        }
+                    }
+                    else {
+                        database.songs.push(newsongsYT[i].suri)
+                        console.log(`[${(i + 1)}/${(newsongsYT.length)}] Successfully added ${ytname} to \x1b[31;49;1mYouTube\x1b[0m playlist`)
+                        await comboPiece(youtube, (i + 1))
+                    }
+                })
             }
-        }
-    })
+        })
+    } else {
+        if (ftcpl !== "") console.log("\nDone! You can find your new \033[31;49;1mYouTube\033[0m playlist here: \033[36;49m" + ftcpl + "\033[0m");
+        else console.log("\nDone!");
+        fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
+            if (err) console.warn("There was a problem saving the database file: ", err);
+        });
+    }
 }
+async function finders(r, t, isong, filtered) {
+    //console.log("finders() ", `${newsongsYT[isong].artist} - ${newsongsYT[isong].name}`, t, isong)
+    if (t > 7) return;
+    var item = r.content[t]
+    if (item.videoId === undefined) return await finders(r, (t + 1), isong, filtered)
+    filtered.count++
+    switch (item.type) {
+        case 'song': filtered.song.push({
+            videoId: item.videoId,
+            name: item.name,
+            artist: item.artist.name,
+            album: item.album.name,
+            duration: item.duration
+        }); break;
+        case 'video': filtered.video.push({
+            videoId: item.videoId,
+            name: item.name,
+            author: item.author,
+            duration: item.duration
+        }); break;
+        default: filtered.other.push({
+            videoId: item.videoId,
+            name: item.name
+        }); break;
+    }
+    await finders(r, (t + 1), isong, filtered)
+}
+
 
 // ---------‐‐--‐----------- GOOGLE AUTH --------------------------------------
 function Gauthorize(credentials, callback) {

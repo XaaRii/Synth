@@ -12,6 +12,6 @@
     "googleapis": "^100.0.0",
     "readline-sync": "^1.4.10",
     "spotify-web-api-node": "^5.0.2",
-    "youtube-music-api": "^1.0.6"
+    "youtube-music-api-update": "^1.0.6"
   }
 }
