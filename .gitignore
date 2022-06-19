@@ -1,5 +1,5 @@
 .vscode
-test-scripts
+dev
 node_modules
 credentials.json
 .gtoken.json

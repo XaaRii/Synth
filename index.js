@@ -1,5 +1,6 @@
 const fs = require('fs');
 var config = require('./credentials.json');
+if (!config.google.client_id || !config.google.client_secret || !config.spotify.clientID || !config.spotify.clientSecret) return console.warn("\033[37;1;4mcredentials.json file is corrupted/missing info!\nPlease double check that everything is correctly filled in.\033[0m")
 var database = {
     SplaylistID: "",
     GplaylistID: "",
