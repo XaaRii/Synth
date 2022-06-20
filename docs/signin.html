@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Synth - sign in</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=yes">
+  <meta name="google-site-verification" content="zvNzy7r_ebGCwkWn8tZeGy95N_sNr85c3FQN69my5HM" />
+  <meta name="author" content="XaaRii">
+  <meta name="description" content="Synth is an application designed to convert Spotify playlist to YouTube playlist.">
+  <link rel="stylesheet" href="bulma.min.css">
+  <link rel="icon" href="favicon.ico">
+</head>
+
+<body>
+  <div class="container is-fluid">
+
+    <section class="hero">
+      <div class="hero-body">
+        <div class="container has-text-centered">
+          <div class="columns py-4">
+            <div class="column">
+              <figure class="container image is-centered is-128x128"><img src="logo.png" alt=""></figure>
+            </div>
+          </div>
+          <h1 class="title is-spaced">Synth - Authorization required</h1>
+          <h2 class="subtitle">In order to be able to add songs to your playlist, you will need to log into your Google
+            account. Don't worry, you only need to do it once.</h2>
+          <h2 class="subtitle"><b>Attention: If you have a brand under your account, you need to pick the account with a
+              YouTube channel!</b></h2>
+
+          <a id="signuplink" href="">
+            <img alt="Log in with YouTube" id="signin" onmousedown="signindown()" onmouseup="signinup()"
+              ondragleave="signinup()" src="signinN.png">
+          </a>
+          <script>
+            var url_string = window.location.href;
+            var url = new URL(url_string);
+            var c = url.searchParams.get("client_id");
+            var r = url.searchParams.get("redirect_uri");
+            if (c & r) {
+              document.getElementById("signuplink").href += "https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube&response_type=code&client_id=" + c + "&redirect_uri=" + r;
+            }
+            if (!c || !r) document.getElementById("signin").src = "signinD.png";
+            function signindown() {
+              if (document.getElementById("signuplink").href !== "") {document.getElementById("signin").src = "signinP.png";}
+            }
+            function signinup() {
+              if (document.getElementById("signuplink").href !== "") {document.getElementById("signin").src = "signinN.png";}
+          }
+          </script>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+
+</html>

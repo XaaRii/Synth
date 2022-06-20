@@ -481,7 +481,8 @@ async function getNewToken(oauth2Client, callback) {
                 console.log('Error while trying to retrieve access token', err);
                 return;
             }
-            response.end("Authorized successfully. You can close this window now.\n\n Also, if you see this vi von zulul.");
+            response.end("Authorized successfully. You can close this window now."); //\n\n Also, if you see this vi von zulul.
+            console.log("Authorized successfully."); //\n\n Also, if you see this vi von zulul.
             authorized = true
             oauth2Client.credentials = token;
             storeToken(token);
@@ -490,7 +491,11 @@ async function getNewToken(oauth2Client, callback) {
         });
     });
     server.listen(5000);
-    console.log("Open this link in the browser and authorize the app.\nURL:\033[36;49m", authUrl, "\033[0m\n\nWaiting for authentification...");
+    var grabtheparams = url.parse(authUrl, true);
+    var webAuth = "https://xaarii.github.io/Synth/signin.html?client_id=" + grabtheparams.query.client_id + "&redirect_uri=" + grabtheparams.query.redirect_uri;
+    console.log("Opening the link in the browser to authorize the app...\nIf it doesn't open automagically, use this URL:\033[36;49m", webAuth, "\033[0m\n\nWaiting for authentification...");
+    const open = require('open');
+    await open(webAuth);
 };
 
 function storeToken(token) {
