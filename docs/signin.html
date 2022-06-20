@@ -38,11 +38,11 @@
             var url = new URL(url_string);
             var c = url.searchParams.get("client_id");
             var r = url.searchParams.get("redirect_uri");
-            if (c !== "" & r !== "") {
+            if (c !== null & r !== null) {
               document.getElementById("signuplink").href += "?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube&response_type=code&client_id=" + c + "&redirect_uri=" + r;
             } else {
               document.getElementById("signin").src = "signinD.png";
-              document.getElementById("signuplink").href += "";
+              document.getElementById("signuplink").href = "";
             }
             function signindown() {
               if (document.getElementById("signuplink").href !== "") { document.getElementById("signin").src = "signinP.png"; }
