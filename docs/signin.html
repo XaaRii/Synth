@@ -29,7 +29,7 @@
           <h2 class="subtitle"><b>Attention: If you have a brand under your account, you need to pick the account with a
               YouTube channel!</b></h2>
 
-          <a id="signuplink" href="">
+          <a id="signuplink" href="https://accounts.google.com/o/oauth2/v2/auth">
             <img alt="Log in with YouTube" id="signin" onmousedown="signindown()" onmouseup="signinup()"
               ondragleave="signinup()" src="signinN.png">
           </a>
@@ -38,16 +38,18 @@
             var url = new URL(url_string);
             var c = url.searchParams.get("client_id");
             var r = url.searchParams.get("redirect_uri");
-            if (c & r) {
-              document.getElementById("signuplink").href += "https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube&response_type=code&client_id=" + c + "&redirect_uri=" + r;
+            if (c !== "" & r !== "") {
+              document.getElementById("signuplink").href += "?access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube&response_type=code&client_id=" + c + "&redirect_uri=" + r;
+            } else {
+              document.getElementById("signin").src = "signinD.png";
+              document.getElementById("signuplink").href += "";
             }
-            if (!c || !r) document.getElementById("signin").src = "signinD.png";
             function signindown() {
-              if (document.getElementById("signuplink").href !== "") {document.getElementById("signin").src = "signinP.png";}
+              if (document.getElementById("signuplink").href !== "") { document.getElementById("signin").src = "signinP.png"; }
             }
             function signinup() {
-              if (document.getElementById("signuplink").href !== "") {document.getElementById("signin").src = "signinN.png";}
-          }
+              if (document.getElementById("signuplink").href !== "") { document.getElementById("signin").src = "signinN.png"; }
+            }
           </script>
         </div>
       </div>

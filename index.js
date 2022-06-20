@@ -98,7 +98,7 @@ function firsttimer() {
     console.log("\033[32;49;1mSpotify\033[0m playlist saved!")
     console.log("\nNow let's set up your \033[31;49;1mYouTube\033[0m playlist.")
     if (!fs.existsSync(Gtokenpath)) {
-        console.log("Generating google api token now...\n\n\033[37;49;1m  Make sure you select an account with a \033[31;49;1mYouTube\033[0m\033[37;49;1m channel!! It's very important!\033[0m\n");
+        console.log("Seems like you're missing google api token. Generating auth link...");
     }
     Gauthorize(config.google, function FTdbCreate(auth) {
         // got the authorization of both, now let's roll
