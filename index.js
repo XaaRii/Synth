@@ -6,29 +6,22 @@ var database = {
     GplaylistID: "",
     songs: []
 }
+// On close/error -> failsafe db save
+process.on('unhandledRejection', up => { throw up });
+var failsafes = [ 'SIGINT', 'SIGTERM', 'SIGHUP' ]
+failsafes.forEach((eventType) => {
+    process.on(eventType, exitt.bind(eventType));
+})
+function exitt(eventType) {
+    if (!whileFT) {
+        fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
+            if (err) console.warn("There was a problem saving the database file: ", err);
+            process.exit()
+        });
+    } process.exit()
+}
 
-process.on('SIGINT', function () {
-    console.log("sigint")
-    fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
-        if (err) console.warn("There was a problem saving the database file: ", err);
-        process.exit()
-    });
-})
-process.on('SIGTERM', function () {
-    console.log("sigterm")
-    fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
-        if (err) console.warn("There was a problem saving the database file: ", err);
-        process.exit()
-    });
-})
-process.on('SIGQUIT', function () {
-    console.log("sigquit")
-    fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
-        if (err) console.warn("There was a problem saving the database file: ", err);
-        process.exit()
-    });
-})
-
+//pl definitions
 var DBfilename = "default.pl"
 if (process.argv.slice(2)[0] !== undefined) DBfilename = process.argv.slice(2)[0] + ".pl"
 console.log("Config file: " + DBfilename)
@@ -36,12 +29,14 @@ fs.readFile(DBfilename, function (err, data) {
     if (err) return;
     database = JSON.parse(data)
 });
-var ftcpl = ""
+var whileFT = false;
+var ftcpl = "";
 
 // Wipeclean vars
 const BRUSH_WIDTH = 6,
     DEFORMATION_FACTOR = 2,
     DELAY = 3
+
 // Spotify API
 var SpotifyWebApi = require('spotify-web-api-node'),
     spotifyApi = new SpotifyWebApi({
@@ -78,6 +73,7 @@ spotifyApi.clientCredentialsGrant().then(
 
 function firsttimer() {
     // First time setup!
+    whileFT = true
     var readlineSync = require('readline-sync')
     console.log("\033[36;49;1mFirst time running Synth detected.\033[0m\n")
     console.log("Let's start with \033[32;49;1mSpotify\033[0m. What playlist do you want to use?")
@@ -169,6 +165,7 @@ function firsttimer() {
                             rls(resp)
                         }
                     }).then(function () {
+                        whileFT = false
                         fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
                             if (err) return console.log("There was a problem saving the database file: ", err);
                             console.log("Alright, saving your preferences...")
@@ -203,6 +200,7 @@ function firsttimer() {
                     database.GplaylistID = res.data.id
                     console.log("Playlist created successfully.")
                     ftcpl = "https://www.youtube.com/playlist?list=" + database.GplaylistID
+                    whileFT = false
                     fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
                         if (err) return console.log("There was a problem saving the database file: ", err);
                         console.log("Alright, saving your preferences...")
