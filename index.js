@@ -120,9 +120,8 @@ function firsttimer() {
                 console.log("\nAnyways, since you already made your playlist, you definitely have some songs in here already.")
 
                 var initdb = []
-                spotifyApi.getPlaylist(database.SplaylistID)
-                    .then(function (data) {
-                        var songs = data.body.tracks.items
+                spotGetAllSongs(database.SplaylistID)
+                    .then(function (songs) {
                         for (let i = 0; i < songs.length; i++) {
                             var sartist = songs[i].track.artists[0].name;
                             var sname = songs[i].track.name;
@@ -134,12 +133,13 @@ function firsttimer() {
                     }).then(function () {
                         var loopers = true
                         while (loopers) {
-                            console.log("\nHere is the list of your \033[32;49;1mSpotify\033[0m songs, please \033[37;49;1mselect those you already have\033[0m in your \033[31;49;1mYouTube\033[0m playlist.")
+                            console.log("\n")
                             for (let i = 0; i < initdb.length; i++) {
                                 var item = initdb[i]
                                 if (item.picked) console.log(`\x1b[32;49m[${item.index}] \x1b[0m ${item.nameplate}`)
                                 else console.log(`\x1b[31;49m[${item.index}] \x1b[0m ${item.nameplate}`)
                             }
+                            console.log("\nHere is the list of your \033[32;49;1mSpotify\033[0m songs, please \033[37;49;1mselect those you already have\033[0m in your \033[31;49;1mYouTube\033[0m playlist.")
                             console.log("\n[0] I'm done with changes. Let's continue!")
                             var resp = readlineSync.question('> ')
                             function rls(resp) {
@@ -216,9 +216,8 @@ function firsttimer() {
 
 function main() {
     // now proceed with casual spotify check, comparison, convert, add
-    spotifyApi.getPlaylist(database.SplaylistID)
-        .then(async function (data) {
-            var songs = data.body.tracks.items
+    spotGetAllSongs(database.SplaylistID)
+        .then(async function (songs) {
             console.log("\nSearching for new \033[32;49;1mSpotify\033[0m songs...")
             var skipped = 0
             for (let i = 0; i < songs.length; i++) {
@@ -243,6 +242,27 @@ function main() {
             } else console.log('Something went wrong!', err);
         });
 }
+
+async function spotGetAllSongs(id) {
+    var data = await spotifyApi.getPlaylistTracks(id);
+    var numBatches = Math.floor(data.body.total/100) + 1;
+    var promises = [];
+    for (let batchNum = 0; batchNum < numBatches ; batchNum++) {
+      var promise = getSongs(id, batchNum * 100);
+      promises.push(promise);
+    }
+    var rawSongData = await Promise.all(promises);
+    var songs = [];
+    for (let i = 0; i < rawSongData.length; i++) {
+      songs = songs.concat(rawSongData[i].body.items);
+    }
+    return songs;
+  }
+  
+  async function getSongs(id, offset) {
+    var songs = await spotifyApi.getPlaylistTracks(id, {offset: offset});
+    return songs;
+  }
 
 async function ytMain(auth) {
     var youtube = google.youtube({ version: 'v3', auth: auth });
