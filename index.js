@@ -8,18 +8,9 @@ var database = {
 }
 // On close/error -> failsafe db save
 process.on('unhandledRejection', up => { throw up });
-var failsafes = [ 'SIGINT', 'SIGTERM', 'SIGHUP' ]
-failsafes.forEach((eventType) => {
-    process.on(eventType, exitt.bind(eventType));
-})
-function exitt(eventType) {
-    if (!whileFT) {
-        fs.writeFile(DBfilename, JSON.stringify(database), (err) => {
-            if (err) console.warn("There was a problem saving the database file: ", err);
-            process.exit()
-        });
-    } process.exit()
-}
+process.on('SIGINT', function () { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); process.exit(); }); } process.exit(); });
+process.on('SIGTERM', function () { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); process.exit(); }); } process.exit(); });
+process.on('SIGHUP', function () { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); process.exit(); }); } process.exit(); });
 
 //pl definitions
 var DBfilename = "default.pl"
@@ -245,24 +236,24 @@ function main() {
 
 async function spotGetAllSongs(id) {
     var data = await spotifyApi.getPlaylistTracks(id);
-    var numBatches = Math.floor(data.body.total/100) + 1;
+    var numBatches = Math.floor(data.body.total / 100) + 1;
     var promises = [];
-    for (let batchNum = 0; batchNum < numBatches ; batchNum++) {
-      var promise = getSongs(id, batchNum * 100);
-      promises.push(promise);
+    for (let batchNum = 0; batchNum < numBatches; batchNum++) {
+        var promise = getSongs(id, batchNum * 100);
+        promises.push(promise);
     }
     var rawSongData = await Promise.all(promises);
     var songs = [];
     for (let i = 0; i < rawSongData.length; i++) {
-      songs = songs.concat(rawSongData[i].body.items);
+        songs = songs.concat(rawSongData[i].body.items);
     }
     return songs;
-  }
-  
-  async function getSongs(id, offset) {
-    var songs = await spotifyApi.getPlaylistTracks(id, {offset: offset});
+}
+
+async function getSongs(id, offset) {
+    var songs = await spotifyApi.getPlaylistTracks(id, { offset: offset });
     return songs;
-  }
+}
 
 async function ytMain(auth) {
     var youtube = google.youtube({ version: 'v3', auth: auth });
