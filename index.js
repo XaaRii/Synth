@@ -126,7 +126,7 @@ function firsttimer() {
                             var sartist = songs[i].track.artists[0].name;
                             var sname = songs[i].track.name;
                             var suri = songs[i].track.uri;
-                            initdb.push({ index: (i + 1), picked: false, nameplate: `${sartist} - ${sname}`, suri: suri })
+                            initdb.push({ index: (i + 1), picked: false, nameplate: `${sartist} - ${sname}`.replace("-", " "), suri: suri })
                         }
                     }, function (err) {
                         console.log("\033[31;49mSomething went wrong when fetching Spotify playlist!", err, "\033[0m");
@@ -219,14 +219,14 @@ function main() {
     spotGetAllSongs(database.SplaylistID)
         .then(async function (songs) {
             console.log("\nSearching for new \033[32;49;1mSpotify\033[0m songs...")
-            var skipped = 0
+            var skipped = 0 // unused but still useful
             for (let i = 0; i < songs.length; i++) {
                 var suri = songs[i].track.uri;
                 if (database.songs.includes(suri)) skipped++;
                 else {
                     var sname = songs[i].track.name
                     var sartist = songs[i].track.artists[0].name
-                    newsongsYT.push({ suri: suri, artist: sartist, name: sname, album: songs[i].track.album.name, yid: "" })
+                    newsongsYT.push({ suri: suri, artist: sartist, name: sname.replace("-", " "), /*album: songs[i].track.album.name,*/ yid: "" }) // album - unused
                     console.log(`\x1b[32;49;1mSpotify\x1b[0m: ${sartist} - ${sname}`)
                 }
             }
@@ -443,7 +443,7 @@ async function finders(r, t, isong, filtered) {
             videoId: item.videoId,
             name: item.name,
             artist: item.artist.name,
-            album: item.album.name,
+            /*album: item.album.name,*/ // unused
             duration: item.duration
         }); break;
         case 'video': filtered.video.push({
