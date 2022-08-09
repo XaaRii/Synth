@@ -791,8 +791,8 @@ async function selfupdater() {
         executeOnComplete: "npm install",
         exitOnComplete: false,
         logConfig: {
-           logGeneral: false,
-           logWarning: false
+            logGeneral: false,
+            logWarning: false
         }
     }
     const updater = new AutoGitUpdate(config);
@@ -807,9 +807,8 @@ async function selfupdater() {
             function rls(rl) {
                 switch (rl) {
                     case "y": rl = "Y";
-                    case "Y": console.log("Updating...");
-                            updyn = true;
-                            waiting = false;
+                    case "Y": updyn = true;
+                        waiting = false;
                         break;
                     case "n": rl = "N";
                     case "N": waiting = false;
@@ -820,6 +819,10 @@ async function selfupdater() {
             rls(readlineSync.question('> '));
         }
         if (updyn) {
+            await updater.setLogConfig({
+                logGeneral: true,
+                logWarning: true
+            })
             await updater.forceUpdate().then(n => { console.log("Update completed."); });
         }
     })
