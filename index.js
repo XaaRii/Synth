@@ -798,6 +798,7 @@ async function selfupdater() {
     const updater = new AutoGitUpdate(config);
     await updater.compareVersions().then(async n => {
         //console.log(n);
+        if (n.remoteVersion == undefined) return;
         console.info(`UPDATER:     There is a new version!\n  Current version: ${n.currentVersion}           New version: ${n.remoteVersion}\n\nDo you wish to update? (Y/N)`);
         var readlineSync = require('readline-sync');
         //var rl = readlineSync.question('> ');
@@ -819,7 +820,7 @@ async function selfupdater() {
             rls(readlineSync.question('> '));
         }
         if (updyn) {
-            await updater.forceUpdate().then(n => { console.log("Update completed."); })
+            await updater.forceUpdate().then(n => { console.log("Update completed."); });
         }
     })
 }
