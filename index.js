@@ -787,7 +787,7 @@ async function selfupdater() {
         repository: 'https://github.com/XaaRii/Synth',
         fromReleases: false,
         tempLocation: os.tmpdir(),
-        ignoreFiles: [".gitignore", "template.credentials.json", "README.md"],
+        ignoreFiles: [".git/", ".gitignore", "template.credentials.json", "README.md"],
         executeOnComplete: "npm install",
         exitOnComplete: false,
         logConfig: {
