@@ -2,12 +2,12 @@
 @powershell -command "&{$H=get-host;$W=$H.ui.rawui;$B=$W.buffersize;$B.width=100;$B.height=9000;$W.buffersize=$B;}"
 @echo off
 cd /d %~dp0
+if NOT exist node_modules call :missing
 title [Synth] Checking for updates...
 node index.js --update
 :A
 cls
 title [Synth] Config manager
-if NOT exist node_modules goto :missing
 if exist .\*.pl (
     echo What config do you want to use? You currently have these:
     for %%f in (.\*.pl) do (
@@ -34,4 +34,4 @@ exit
 title Please wait a moment...
 echo node_modules folder not found, generating new one.
 call npm install
-goto :A
+goto :EOF
