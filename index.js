@@ -1,3 +1,6 @@
+// AutoUpdate
+if (process.argv.slice(2)[0] === "--update") return selfupdater().then(function () { process.exit() })
+/////////////
 const fs = require('fs');
 var config = require('./credentials.json');
 if (!config.google.client_id || !config.google.client_secret || !config.spotify.clientID || !config.spotify.clientSecret) return console.warn("\033[37;1;4mcredentials.json file is corrupted/missing info!\nPlease double check that everything is correctly filled in.\033[0m")
@@ -37,6 +40,7 @@ var SpotifyWebApi = require('spotify-web-api-node'),
 
 // Spotify to YT
 const YoutubeMusicApi = require('youtube-music-api-update');
+const { setTimeout } = require('timers/promises');
 const ytsearch = new YoutubeMusicApi()
 
 // Google API -----------------------------
@@ -773,5 +777,49 @@ function drawPoints(COLUMNS, ROWS, list, character = '#') {
     list.forEach((point) => {
         if (point.y < ROWS && point.x < COLUMNS)
             drawnStringAt(point.x, point.y, character)
+    })
+}
+
+async function selfupdater() {
+    const os = require("os");
+    const AutoGitUpdate = require('auto-git-update');
+    const config = {
+        repository: 'https://github.com/XaaRii/Synth',
+        fromReleases: false,
+        tempLocation: os.tmpdir(),
+        ignoreFiles: [".gitignore", "template.credentials.json", "README.md"],
+        executeOnComplete: "npm install",
+        exitOnComplete: false,
+        logConfig: {
+           logGeneral: false,
+           logWarning: false
+        }
+    }
+    const updater = new AutoGitUpdate(config);
+    await updater.compareVersions().then(async n => {
+        //console.log(n);
+        console.info(`UPDATER:     There is a new version!\n  Current version: ${n.currentVersion}           New version: ${n.remoteVersion}\n\nDo you wish to update? (Y/N)`);
+        var readlineSync = require('readline-sync');
+        //var rl = readlineSync.question('> ');
+        var waiting = true, updyn = false;
+        while (waiting) {
+            function rls(rl) {
+                switch (rl) {
+                    case "y": rl = "Y";
+                    case "Y": console.log("Updating...");
+                            updyn = true;
+                            waiting = false;
+                        break;
+                    case "n": rl = "N";
+                    case "N": waiting = false;
+                        break;
+                    default: console.log("Wrong choice, try again");
+                }
+            };
+            rls(readlineSync.question('> '));
+        }
+        if (updyn) {
+            await updater.forceUpdate().then(n => { console.log("Update completed."); })
+        }
     })
 }

@@ -2,6 +2,8 @@
 @powershell -command "&{$H=get-host;$W=$H.ui.rawui;$B=$W.buffersize;$B.width=100;$B.height=9000;$W.buffersize=$B;}"
 @echo off
 cd /d %~dp0
+title [Synth] Checking for updates...
+node index.js --update
 :A
 cls
 title [Synth] Config manager
