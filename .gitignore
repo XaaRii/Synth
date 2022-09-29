@@ -1,0 +1,7 @@
+.vscode
+dev
+node_modules
+.gtoken.json
+*.pl
+credentials.json
+packag*.json
