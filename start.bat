@@ -2,6 +2,11 @@
 @powershell -command "&{$H=get-host;$W=$H.ui.rawui;$B=$W.buffersize;$B.width=100;$B.height=9000;$W.buffersize=$B;}"
 @echo off
 cd /d %~dp0
+
+IF EXIST %~dp0\nodejs\node.exe (
+	SET "PATH=%PATH%;%~dp0nodejs"
+) else echo NODEJS NOT FOUND ^!^!^!
+
 if NOT exist node_modules call :missing
 title [Synth] Checking for updates...
 node index.js --update

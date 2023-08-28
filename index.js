@@ -10,7 +10,7 @@ var database = {
     songs: []
 }
 // On close/error -> failsafe db save
-process.on('unhandledRejection', up => { throw up });
+process.on('unhandledRejection', up => { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); throw up }); } });
 process.on('SIGINT', function () { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); process.exit(); }); } process.exit(); });
 process.on('SIGTERM', function () { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); process.exit(); }); } process.exit(); });
 process.on('SIGHUP', function () { if (!whileFT) { fs.writeFile(DBfilename, JSON.stringify(database), (err) => { if (err) console.warn("problem with saving the database file: ", err); process.exit(); }); } process.exit(); });
@@ -40,7 +40,7 @@ var SpotifyWebApi = require('spotify-web-api-node'),
 
 // Spotify to YT
 const YoutubeMusicApi = require('youtube-music-api-update');
-const { setTimeout } = require('timers/promises');
+// const { setTimeout } = require('timers/promises'); // why the hell is this here?
 const ytsearch = new YoutubeMusicApi()
 
 // Google API -----------------------------
@@ -431,6 +431,7 @@ async function finders(r, t, isong, filtered) {
     //console.log("finders() ", `${newsongsYT[isong].artist} - ${newsongsYT[isong].name}`, t, isong)
     if (t > 7) return;
     var item = r.content[t]
+    if (!item) return await finders(r, (t + 1), isong, filtered)
     if (item.videoId === undefined) return await finders(r, (t + 1), isong, filtered)
     filtered.count++
     switch (item.type) {
